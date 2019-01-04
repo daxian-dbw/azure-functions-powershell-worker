@@ -6,6 +6,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Microsoft.Azure.Functions.PowerShellWorker.Messaging;
@@ -21,6 +25,12 @@ namespace  Microsoft.Azure.Functions.PowerShellWorker
         private readonly MessagingStream _msgStream;
         private readonly PowerShellManagerPool _powershellPool;
 
+        private int _taskCount;
+        private int _taskRunCount;
+        private long _sumInvTime;
+        private long _sumWriteTime;
+        private StreamWriter _writer;
+
         // Indicate whether the FunctionApp has been initialized.
         private bool _isFunctionAppInitialized;
 
@@ -29,29 +39,37 @@ namespace  Microsoft.Azure.Functions.PowerShellWorker
             _msgStream = msgStream;
             _powershellPool = new PowerShellManagerPool(msgStream);
             _functionLoader = new FunctionLoader();
+
+            _taskCount = 0;
+            _writer = new StreamWriter(@"C:\arena\tmp\stat.txt", append: true, Encoding.ASCII);
+            _writer.WriteLine("InvRequest,InvDone,AveInvTime,AveWriteTime");
         }
 
         internal async Task ProcessRequestLoop()
         {
-            using (_msgStream)
+            while (await _msgStream.MoveNext())
             {
-                while (await _msgStream.MoveNext())
+                StreamingMessage request = _msgStream.GetCurrentMessage();
+                switch (request.ContentCase)
                 {
-                    StreamingMessage request = _msgStream.GetCurrentMessage();
-                    switch (request.ContentCase)
-                    {
-                        case StreamingMessage.ContentOneofCase.WorkerInitRequest:
-                            await ProcessWorkerInitRequest(request);
-                            break;
-                        case StreamingMessage.ContentOneofCase.FunctionLoadRequest:
-                            await ProcessFunctionLoadRequest(request);
-                            break;
-                        case StreamingMessage.ContentOneofCase.InvocationRequest:
-                            _ = Task.Run(() => ProcessInvocationRequest(request));
-                            break;
-                        default:
-                            throw new InvalidOperationException($"Not supportted message type: {request.ContentCase}");
-                    }
+                    case StreamingMessage.ContentOneofCase.WorkerInitRequest:
+                        await ProcessWorkerInitRequest(request);
+                        break;
+                    case StreamingMessage.ContentOneofCase.FunctionLoadRequest:
+                        await ProcessFunctionLoadRequest(request);
+                        break;
+                    case StreamingMessage.ContentOneofCase.InvocationRequest:
+                        _taskCount++;
+                        _ = Task.Run(() => ProcessInvocationRequest(request));
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Not supportted message type: {request.ContentCase}");
+                }
+
+                if (_taskCount % 100 == 0)
+                {
+                    _writer.WriteLine($"{_taskCount},{_taskRunCount},{_sumInvTime/_taskRunCount},{_sumWriteTime/_taskRunCount}");
+                    _writer.Flush();
                 }
             }
         }
@@ -112,6 +130,9 @@ namespace  Microsoft.Azure.Functions.PowerShellWorker
         /// </summary>
         internal async Task ProcessInvocationRequest(StreamingMessage request)
         {
+            Interlocked.Increment(ref _taskRunCount);
+            Stopwatch watch = Stopwatch.StartNew();
+
             PowerShellManager psManager = null;
             InvocationRequest invocationRequest = request.InvocationRequest;
 
@@ -144,7 +165,13 @@ namespace  Microsoft.Azure.Functions.PowerShellWorker
                 _powershellPool.ReclaimUsedWorker(psManager);
             }
 
+            watch.Stop();
+            Interlocked.Add(ref _sumInvTime, watch.ElapsedMilliseconds);
+
+            watch.Restart();
             await _msgStream.WriteAsync(response);
+            watch.Stop();
+            Interlocked.Add(ref _sumWriteTime, watch.ElapsedMilliseconds);
         }
 
         #region Helper_Methods
