@@ -22,6 +22,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
     {
         private readonly ILogger _logger;
         private readonly PowerShell _pwsh;
+        private bool _functionDeployed;
 
         /// <summary>
         /// Gets the Runspace InstanceId.
@@ -82,6 +83,34 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
 
             // Initialize the Runspace
             InvokeProfile(FunctionLoader.FunctionAppProfilePath);
+
+            // Deploy functions from the function App
+            DeployAzFunctionToRunspace();
+        }
+
+        /// <summary>
+        /// Create the PowerShell function that is equivalent to the 'scriptFile' when possible.
+        /// </summary>
+        internal void DeployAzFunctionToRunspace()
+        {
+            if (_functionDeployed)
+            {
+                return;
+            }
+
+            foreach (AzFunctionInfo functionInfo in FunctionLoader.LoadedFunctions.Values)
+            {
+                _functionDeployed = true;
+
+                if (functionInfo.FuncScriptBlock != null)
+                {
+                    _pwsh.Runspace.SessionStateProxy.InvokeProvider.Item.New(
+                        @"Function:\",
+                        functionInfo.FuncName,
+                        itemTypeName: null,
+                        functionInfo.FuncScriptBlock);
+                }
+            }
         }
 
         /// <summary>
@@ -138,7 +167,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
             {
                 if (string.IsNullOrEmpty(entryPoint))
                 {
-                    _pwsh.AddCommand(scriptPath);
+                    _pwsh.AddCommand(functionInfo.FuncScriptBlock != null ? functionInfo.FuncName : scriptPath);
                 }
                 else
                 {

@@ -20,7 +20,6 @@ namespace  Microsoft.Azure.Functions.PowerShellWorker
 {
     internal class RequestProcessor
     {
-        private readonly FunctionLoader _functionLoader;
         private readonly MessagingStream _msgStream;
         private readonly PowerShellManagerPool _powershellPool;
         private readonly DependencyManager _dependencyManager;
@@ -39,7 +38,6 @@ namespace  Microsoft.Azure.Functions.PowerShellWorker
         {
             _msgStream = msgStream;
             _powershellPool = new PowerShellManagerPool(msgStream);
-            _functionLoader = new FunctionLoader();
             _dependencyManager = new DependencyManager();
 
             // Host sends capabilities/init data to worker
@@ -184,7 +182,7 @@ namespace  Microsoft.Azure.Functions.PowerShellWorker
             try
             {
                 // Load the metadata of the function.
-                _functionLoader.LoadFunction(functionLoadRequest);
+                FunctionLoader.LoadFunction(functionLoadRequest);
             }
             catch (Exception e)
             {
@@ -206,7 +204,7 @@ namespace  Microsoft.Azure.Functions.PowerShellWorker
 
             try
             {
-                functionInfo = _functionLoader.GetFunctionInfo(request.InvocationRequest.FunctionId);
+                functionInfo = FunctionLoader.GetFunctionInfo(request.InvocationRequest.FunctionId);
                 psManager = _powershellPool.CheckoutIdleWorker(request, functionInfo);
 
                 if (_powershellPool.UpperBound == 1)
