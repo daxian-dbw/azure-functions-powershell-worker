@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Reflection;
 
 using Microsoft.Azure.Functions.PowerShellWorker.Utility;
 using Microsoft.Azure.WebJobs.Script.Grpc.Messages;
@@ -229,9 +230,6 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
 
         private void ResetRunspace(string moduleName)
         {
-            // Reset the runspace to the Initial Session State
-            _pwsh.Runspace.ResetRunspaceState();
-
             if (!string.IsNullOrEmpty(moduleName))
             {
                 // If the function had an entry point, this will remove the module that was loaded
