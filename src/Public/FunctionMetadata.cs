@@ -4,6 +4,7 @@
 //
 
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 
@@ -16,6 +17,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker
     {
         internal static ConcurrentDictionary<Guid, ReadOnlyDictionary<string, ReadOnlyBindingInfo>> OutputBindingCache
             = new ConcurrentDictionary<Guid, ReadOnlyDictionary<string, ReadOnlyBindingInfo>>();
+        internal static ConcurrentDictionary<Guid, Hashtable> OutputBindingValues = new ConcurrentDictionary<Guid, Hashtable>();
 
         /// <summary>
         /// Get the binding metadata for the given Runspace instance id.

@@ -230,7 +230,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.DependencyManagement
                             .AddParameter("Name", moduleName)
                             .AddParameter("RequiredVersion", latestVersion)
                             .AddParameter("Path", DependenciesPath)
-                            .AddParameter("Force", true)
+                            .AddParameter("Force", Utils.BoxedTrue)
                             .AddParameter("ErrorAction", "Stop")
                             .InvokeAndClearCommands();
 
@@ -243,7 +243,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.DependencyManagement
                     // Clean up
                     pwsh.AddCommand(Utils.RemoveModuleCmdletInfo)
                         .AddParameter("Name", "PackageManagement, PowerShellGet")
-                        .AddParameter("Force", true)
+                        .AddParameter("Force", Utils.BoxedTrue)
                         .AddParameter("ErrorAction", "SilentlyContinue")
                         .InvokeAndClearCommands();
                 }

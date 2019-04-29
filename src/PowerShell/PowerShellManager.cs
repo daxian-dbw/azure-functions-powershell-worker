@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Reflection;
 
 using Microsoft.Azure.Functions.PowerShellWorker.Utility;
 using Microsoft.Azure.WebJobs.Script.Grpc.Messages;
@@ -20,6 +21,16 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
 
     internal class PowerShellManager
     {
+        private const BindingFlags NonPublicInstance = BindingFlags.NonPublic | BindingFlags.Instance;
+        private readonly static object[] _argumentsGetJobs = new object[] { null, false, false, null };
+        private readonly static MethodInfo _methodGetJobs = typeof(JobManager).GetMethod(
+            "GetJobs",
+            NonPublicInstance,
+            binder: null,
+            callConvention: CallingConventions.Any,
+            new Type[] { typeof(Cmdlet), typeof(bool), typeof(bool), typeof(string[]) },
+            modifiers: null);
+
         private readonly ILogger _logger;
         private readonly PowerShell _pwsh;
         private bool _runspaceInited;
@@ -79,8 +90,30 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
         {
             if (!_runspaceInited)
             {
+                // Invoke the profile
                 InvokeProfile(FunctionLoader.FunctionAppProfilePath);
+
+                // Deploy functions from the function App
+                DeployAzFunctionToRunspace();
                 _runspaceInited = true;
+            }
+        }
+
+        /// <summary>
+        /// Create the PowerShell function that is equivalent to the 'scriptFile' when possible.
+        /// </summary>
+        private void DeployAzFunctionToRunspace()
+        {
+            foreach (AzFunctionInfo functionInfo in FunctionLoader.LoadedFunctions.Values)
+            {
+                if (functionInfo.FuncScriptBlock != null)
+                {
+                    _pwsh.Runspace.SessionStateProxy.InvokeProvider.Item.New(
+                        @"Function:\",
+                        functionInfo.FuncName,
+                        itemTypeName: null,
+                        functionInfo.FuncScriptBlock);
+                }
             }
         }
 
@@ -102,9 +135,9 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
                 // Import-Module on a .ps1 file will evaluate the script in the global scope.
                 _pwsh.AddCommand(Utils.ImportModuleCmdletInfo)
                         .AddParameter("Name", profilePath)
-                        .AddParameter("PassThru", true)
+                        .AddParameter("PassThru", Utils.BoxedTrue)
                      .AddCommand(Utils.RemoveModuleCmdletInfo)
-                        .AddParameter("Force", true)
+                        .AddParameter("Force", Utils.BoxedTrue)
                         .AddParameter("ErrorAction", "SilentlyContinue")
                      .InvokeAndClearCommands();
             }
@@ -133,18 +166,16 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
         {
             string scriptPath = functionInfo.ScriptPath;
             string entryPoint = functionInfo.EntryPoint;
-            string moduleName = null;
 
             try
             {
                 if (string.IsNullOrEmpty(entryPoint))
                 {
-                    _pwsh.AddCommand(scriptPath);
+                    _pwsh.AddCommand(functionInfo.FuncScriptBlock != null ? functionInfo.FuncName : scriptPath);
                 }
                 else
                 {
                     // If an entry point is defined, we import the script module.
-                    moduleName = Path.GetFileNameWithoutExtension(scriptPath);
                     _pwsh.AddCommand(Utils.ImportModuleCmdletInfo)
                             .AddParameter("Name", scriptPath)
                          .InvokeAndClearCommands();
@@ -173,9 +204,8 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
                 Collection<object> pipelineItems = _pwsh.AddCommand("Microsoft.Azure.Functions.PowerShellWorker\\Trace-PipelineObject")
                                                         .InvokeAndClearCommands<object>();
 
-                Hashtable result = _pwsh.AddCommand("Microsoft.Azure.Functions.PowerShellWorker\\Get-OutputBinding")
-                                            .AddParameter("Purge", true)
-                                        .InvokeAndClearCommands<Hashtable>()[0];
+                FunctionMetadata.OutputBindingValues.TryGetValue(_pwsh.Runspace.InstanceId, out Hashtable result);
+                result = result ?? new Hashtable(StringComparer.OrdinalIgnoreCase);
 
                 /*
                  * TODO: See GitHub issue #82. We are not settled on how to handle the Azure Functions concept of the $returns Output Binding
@@ -195,31 +225,21 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
             }
             finally
             {
-                ResetRunspace(moduleName);
+                ResetRunspace();
             }
         }
 
-        private void ResetRunspace(string moduleName)
+        private void ResetRunspace()
         {
-            // Reset the runspace to the Initial Session State
-            _pwsh.Runspace.ResetRunspaceState();
-
-            if (!string.IsNullOrEmpty(moduleName))
+            var jobs = (List<Job2>)_methodGetJobs.Invoke(_pwsh.Runspace.JobManager, _argumentsGetJobs);
+            if (jobs != null && jobs.Count > 0)
             {
-                // If the function had an entry point, this will remove the module that was loaded
-                _pwsh.AddCommand(Utils.RemoveModuleCmdletInfo)
-                        .AddParameter("Name", moduleName)
-                        .AddParameter("Force", true)
+                // Clean up jobs started during the function execution.
+                _pwsh.AddCommand(Utils.RemoveJobCmdletInfo)
+                        .AddParameter("Force", Utils.BoxedTrue)
                         .AddParameter("ErrorAction", "SilentlyContinue")
-                     .InvokeAndClearCommands();
+                     .InvokeAndClearCommands(jobs);
             }
-
-            // Clean up jobs started during the function execution.
-            _pwsh.AddCommand(Utils.GetJobCmdletInfo)
-                 .AddCommand(Utils.RemoveJobCmdletInfo)
-                    .AddParameter("Force", true)
-                    .AddParameter("ErrorAction", "SilentlyContinue")
-                 .InvokeAndClearCommands();
         }
     }
 }
