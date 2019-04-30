@@ -86,8 +86,6 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.Commands
         private DataCollectingBehavior _behavior;
         private Hashtable _outputBindings;
 
-        private static Func<Guid, Hashtable> s_delegate = key => new Hashtable(StringComparer.OrdinalIgnoreCase);
-
         /// <summary>
         /// BeginProcessing override.
         /// </summary>
@@ -95,7 +93,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.Commands
         {
             _bindingInfo = GetBindingInfo(Name);
             _behavior = GetDataCollectingBehavior(_bindingInfo);
-            _outputBindings = FunctionMetadata.OutputBindingValues.GetOrAdd(Runspace.DefaultRunspace.InstanceId, s_delegate);
+            _outputBindings = FunctionMetadata.GetOutputBindingHashtable(Runspace.DefaultRunspace.InstanceId);
         }
 
         /// <summary>

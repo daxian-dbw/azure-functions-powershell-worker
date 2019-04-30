@@ -32,7 +32,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker
         internal readonly string EntryPoint;
         internal readonly string ScriptPath;
         internal readonly AzFunctionType Type;
-        internal readonly ScriptBlock FuncScriptBlock; 
+        internal readonly ScriptBlock FuncScriptBlock;
         internal readonly ReadOnlyDictionary<string, PSScriptParamInfo> FuncParameters;
         internal readonly ReadOnlyDictionary<string, ReadOnlyBindingInfo> AllBindings;
         internal readonly ReadOnlyDictionary<string, ReadOnlyBindingInfo> InputBindings;

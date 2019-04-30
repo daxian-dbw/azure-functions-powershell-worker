@@ -204,8 +204,9 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
                 Collection<object> pipelineItems = _pwsh.AddCommand("Microsoft.Azure.Functions.PowerShellWorker\\Trace-PipelineObject")
                                                         .InvokeAndClearCommands<object>();
 
-                FunctionMetadata.OutputBindingValues.TryGetValue(_pwsh.Runspace.InstanceId, out Hashtable result);
-                result = result ?? new Hashtable(StringComparer.OrdinalIgnoreCase);
+                Hashtable outputBindings = FunctionMetadata.GetOutputBindingHashtable(_pwsh.Runspace.InstanceId);
+                Hashtable result = new Hashtable(outputBindings, StringComparer.OrdinalIgnoreCase);
+                outputBindings.Clear();
 
                 /*
                  * TODO: See GitHub issue #82. We are not settled on how to handle the Azure Functions concept of the $returns Output Binding
