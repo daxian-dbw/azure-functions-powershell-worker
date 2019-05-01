@@ -7,5 +7,7 @@ param ($Req, $TriggerMetadata)
 
 # Used for logging tests
 Write-Verbose "a log"
+$func = Get-Command 'TestFuncApp' -CommandType Function
 
-Push-OutputBinding -Name res -Value $TriggerMetadata.Req
+$result = "{0},{1}" -f $TriggerMetadata.Req, $func.Name
+Push-OutputBinding -Name res -Value $result

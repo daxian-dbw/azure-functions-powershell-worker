@@ -17,7 +17,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker
     /// </summary>
     internal static class FunctionLoader
     {
-        internal static readonly Dictionary<string, AzFunctionInfo> LoadedFunctions = new Dictionary<string, AzFunctionInfo>();
+        private static readonly Dictionary<string, AzFunctionInfo> LoadedFunctions = new Dictionary<string, AzFunctionInfo>();
 
         internal static string FunctionAppRootPath { get; private set; }
         internal static string FunctionAppProfilePath { get; private set; }
@@ -43,6 +43,22 @@ namespace Microsoft.Azure.Functions.PowerShellWorker
         internal static void LoadFunction(FunctionLoadRequest request)
         {
             LoadedFunctions.Add(request.FunctionId, new AzFunctionInfo(request.Metadata));
+        }
+
+        /// <summary>
+        /// Get all loaded functions.
+        /// </summary>
+        internal static IEnumerable<AzFunctionInfo> GetLoadedFunctions()
+        {
+            return LoadedFunctions.Values;
+        }
+
+        /// <summary>
+        /// Clear all loaded functions.
+        /// </summary>
+        internal static void ClearLoadedFunctions()
+        {
+            LoadedFunctions.Clear();
         }
 
         /// <summary>

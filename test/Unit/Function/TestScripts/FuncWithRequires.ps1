@@ -1,15 +1,10 @@
-﻿#
+#
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
 #
 
-param ($Req)
+#Requires -Modules ThreadJob
 
-if(!$global:foo)
-{
-    $global:foo = "is not set"
-}
+param($req, $inputBlob)
 
-Push-OutputBinding -Name res -Value $global:foo
-
-$global:foo = "is set"
+"DoNothing"

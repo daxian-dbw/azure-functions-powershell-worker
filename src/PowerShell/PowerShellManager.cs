@@ -104,7 +104,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
         /// </summary>
         private void DeployAzFunctionToRunspace()
         {
-            foreach (AzFunctionInfo functionInfo in FunctionLoader.LoadedFunctions.Values)
+            foreach (AzFunctionInfo functionInfo in FunctionLoader.GetLoadedFunctions())
             {
                 if (functionInfo.FuncScriptBlock != null)
                 {

@@ -176,8 +176,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.Commands
                 this.ThrowTerminatingError(er);
             }
 
-            ReadOnlyBindingInfo bindingInfo = bindingMap[name];
-            if (bindingInfo == null)
+            if (!bindingMap.TryGetValue(name, out ReadOnlyBindingInfo bindingInfo))
             {
                 string errorMsg = string.Format(PowerShellWorkerStrings.BindingNameNotExist, name);
                 ErrorRecord er = new ErrorRecord(
