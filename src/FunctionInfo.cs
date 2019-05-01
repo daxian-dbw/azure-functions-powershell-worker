@@ -31,6 +31,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker
         internal readonly string FuncName;
         internal readonly string EntryPoint;
         internal readonly string ScriptPath;
+        internal readonly string DeployedPSFuncName;
         internal readonly AzFunctionType Type;
         internal readonly ScriptBlock FuncScriptBlock;
         internal readonly ReadOnlyDictionary<string, PSScriptParamInfo> FuncParameters;
@@ -130,6 +131,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker
                 // then we get the script block and will deploy it as a PowerShell function in the
                 // global scope of each Runspace, so as to avoid hitting the disk every invocation.
                 FuncScriptBlock = scriptAst.GetScriptBlock();
+                DeployedPSFuncName = $"_{FuncName}_";
             }
 
             AllBindings = new ReadOnlyDictionary<string, ReadOnlyBindingInfo>(allBindings);

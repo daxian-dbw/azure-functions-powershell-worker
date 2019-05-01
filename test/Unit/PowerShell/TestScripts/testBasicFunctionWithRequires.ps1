@@ -8,7 +8,7 @@
 param ($req)
 
 $module = Get-Module ThreadJob
-$func = Get-Command 'TestFuncApp' -CommandType Function -ErrorAction Ignore
+$cmdName = $MyInvocation.MyCommand.Name
 
-$result = "{0},{1},{2}" -f $req, $module.Name, $func.Name
+$result = "{0},{1},{2}" -f $req, $module.Name, $cmdName
 Push-OutputBinding -Name res -Value $result

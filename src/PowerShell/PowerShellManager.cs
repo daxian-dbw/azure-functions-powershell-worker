@@ -120,7 +120,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
                         useLocalScope: false,
                         s_newFunction,
                         input: null,
-                        functionInfo.FuncName,
+                        functionInfo.DeployedPSFuncName,
                         functionInfo.FuncScriptBlock);
                 }
             }
@@ -180,7 +180,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
             {
                 if (string.IsNullOrEmpty(entryPoint))
                 {
-                    _pwsh.AddCommand(functionInfo.FuncScriptBlock != null ? functionInfo.FuncName : scriptPath);
+                    _pwsh.AddCommand(functionInfo.DeployedPSFuncName ?? scriptPath);
                 }
                 else
                 {

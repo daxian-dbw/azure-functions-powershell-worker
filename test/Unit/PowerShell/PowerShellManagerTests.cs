@@ -108,7 +108,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.Test
                 Assert.Empty(outputBindings);
 
                 // A PowerShell function should be created fro the Az function.
-                string expectedResult = $"{TestStringData},TestFuncApp";
+                string expectedResult = $"{TestStringData},{functionInfo.DeployedPSFuncName}";
                 Assert.Equal(expectedResult, result[TestOutputBindingName]);
             }
             finally
@@ -134,7 +134,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.Test
 
                 // When function script has #requires, not PowerShell function will be created for the Az function,
                 // and the invocation uses the file path directly.
-                string expectedResult = $"{TestStringData},ThreadJob,";
+                string expectedResult = $"{TestStringData},ThreadJob,testBasicFunctionWithRequires.ps1";
                 Assert.Equal(expectedResult, result[TestOutputBindingName]);
             }
             finally
@@ -164,7 +164,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.Test
                 Assert.Empty(outputBindings);
 
                 // A PowerShell function should be created fro the Az function.
-                string expectedResult = $"{TestStringData},TestFuncApp";
+                string expectedResult = $"{TestStringData},{functionInfo.DeployedPSFuncName}";
                 Assert.Equal(expectedResult, result[TestOutputBindingName]);
             }
             finally
@@ -188,7 +188,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.Test
                 Hashtable outputBindings = FunctionMetadata.GetOutputBindingHashtable(testManager.InstanceId);
                 Assert.Empty(outputBindings);
 
-                string expectedResult = $"{TestStringData},";
+                string expectedResult = $"{TestStringData},Run";
                 Assert.Equal(expectedResult, result[TestOutputBindingName]);
             }
             finally

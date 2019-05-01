@@ -4,8 +4,8 @@
 #
 
 function Run($Req) {
-    $func = Get-Command 'TestFuncApp' -CommandType Function
+    $cmdName = $MyInvocation.MyCommand.Name
 
-    $result = "{0},{1}" -f $Req, $func.Name
+    $result = "{0},{1}" -f $Req, $cmdName
     Push-OutputBinding -Name res -Value $result
 }

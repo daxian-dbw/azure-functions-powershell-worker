@@ -7,7 +7,7 @@ param ($Req)
 
 # Used for logging tests
 Write-Verbose "a log"
-$func = Get-Command 'TestFuncApp' -CommandType Function
+$cmdName = $MyInvocation.MyCommand.Name
 
-$result = "{0},{1}" -f $Req, $func.Name
+$result = "{0},{1}" -f $Req, $cmdName
 Push-OutputBinding -Name res -Value $result
