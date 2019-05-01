@@ -22,8 +22,14 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
     internal class PowerShellManager
     {
         private const BindingFlags NonPublicInstance = BindingFlags.NonPublic | BindingFlags.Instance;
-        private readonly static object[] _argumentsGetJobs = new object[] { null, false, false, null };
-        private readonly static MethodInfo _methodGetJobs = typeof(JobManager).GetMethod(
+        private const string NewFunctionScriptText = @"
+            param([string]$name, [scriptblock]$body)
+            New-Item -Path Function:\ -Name $name -Value $body -Options Constant
+        ";
+
+        private readonly static ScriptBlock s_newFunction = ScriptBlock.Create(NewFunctionScriptText);
+        private readonly static object[] s_argumentsGetJobs = new object[] { null, false, false, null };
+        private readonly static MethodInfo s_methodGetJobs = typeof(JobManager).GetMethod(
             "GetJobs",
             NonPublicInstance,
             binder: null,
@@ -90,11 +96,11 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
         {
             if (!_runspaceInited)
             {
-                // Invoke the profile
-                InvokeProfile(FunctionLoader.FunctionAppProfilePath);
-
                 // Deploy functions from the function App
                 DeployAzFunctionToRunspace();
+
+                // Invoke the profile
+                InvokeProfile(FunctionLoader.FunctionAppProfilePath);
                 _runspaceInited = true;
             }
         }
@@ -108,10 +114,13 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
             {
                 if (functionInfo.FuncScriptBlock != null)
                 {
-                    _pwsh.Runspace.SessionStateProxy.InvokeProvider.Item.New(
-                        @"Function:\",
+                    // Create PS constant function for the Az function.
+                    // Constant function cannot be changed or removed, it stays till the session ends.
+                    _pwsh.Runspace.SessionStateProxy.InvokeCommand.InvokeScript(
+                        useLocalScope: false,
+                        s_newFunction,
+                        input: null,
                         functionInfo.FuncName,
-                        itemTypeName: null,
                         functionInfo.FuncScriptBlock);
                 }
             }
@@ -232,7 +241,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
 
         private void ResetRunspace()
         {
-            var jobs = (List<Job2>)_methodGetJobs.Invoke(_pwsh.Runspace.JobManager, _argumentsGetJobs);
+            var jobs = (List<Job2>)s_methodGetJobs.Invoke(_pwsh.Runspace.JobManager, s_argumentsGetJobs);
             if (jobs != null && jobs.Count > 0)
             {
                 // Clean up jobs started during the function execution.
