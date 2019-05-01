@@ -22,12 +22,7 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
     internal class PowerShellManager
     {
         private const BindingFlags NonPublicInstance = BindingFlags.NonPublic | BindingFlags.Instance;
-        private const string NewFunctionScriptText = @"
-            param([string]$name, [scriptblock]$body)
-            New-Item -Path Function:\ -Name $name -Value $body -Options Constant
-        ";
 
-        private readonly static ScriptBlock s_newFunction = ScriptBlock.Create(NewFunctionScriptText);
         private readonly static object[] s_argumentsGetJobs = new object[] { null, false, false, null };
         private readonly static MethodInfo s_methodGetJobs = typeof(JobManager).GetMethod(
             "GetJobs",
@@ -116,12 +111,12 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.PowerShell
                 {
                     // Create PS constant function for the Az function.
                     // Constant function cannot be changed or removed, it stays till the session ends.
-                    _pwsh.Runspace.SessionStateProxy.InvokeCommand.InvokeScript(
-                        useLocalScope: false,
-                        s_newFunction,
-                        input: null,
-                        functionInfo.DeployedPSFuncName,
-                        functionInfo.FuncScriptBlock);
+                    _pwsh.AddCommand("New-Item")
+                            .AddParameter("Path", @"Function:\")
+                            .AddParameter("Name", functionInfo.DeployedPSFuncName)
+                            .AddParameter("Value", functionInfo.FuncScriptBlock)
+                            .AddParameter("Options", "Constant")
+                         .InvokeAndClearCommands();
                 }
             }
         }
