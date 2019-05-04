@@ -198,6 +198,29 @@ namespace Microsoft.Azure.Functions.PowerShellWorker.Test
         }
 
         [Fact]
+        public void FunctionShouldCleanupVariableTable()
+        {
+            string path = Path.Join(s_funcDirectory, "testFunctionCleanup.ps1");
+            var (functionInfo, testManager) = PrepareFunction(path, string.Empty);
+
+            try
+            {
+                FunctionMetadata.RegisterFunctionMetadata(testManager.InstanceId, functionInfo);
+
+                Hashtable result1 = testManager.InvokeFunction(functionInfo, null, s_testInputData);
+                Assert.Equal("is not set", result1[TestOutputBindingName]);
+
+                // the value should not change if the variable table is properly cleaned up.
+                Hashtable result2 = testManager.InvokeFunction(functionInfo, null, s_testInputData);
+                Assert.Equal("is not set", result2[TestOutputBindingName]);
+            }
+            finally
+            {
+                FunctionMetadata.UnregisterFunctionMetadata(testManager.InstanceId);
+            }
+        }
+
+        [Fact]
         public void ModulePathShouldBeSetCorrectly()
         {
             string workerModulePath = Path.Join(AppDomain.CurrentDomain.BaseDirectory, "Modules");
